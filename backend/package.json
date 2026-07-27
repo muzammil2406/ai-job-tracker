@@ -3,12 +3,11 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "postinstall": "npx prisma generate",
-    "prisma:push": "npx prisma db push",
     "build": "nest build",
     "start": "nest start",
     "start:dev": "nest start --watch",
-    "start:prod": "npx prisma db push && node dist/main"
+    "start:prod": "prisma db push && node dist/main",
+    "postinstall": "npx prisma generate"
   },
   "dependencies": {
     "openai": "^4.73.0",

@@ -6,7 +6,7 @@ Full-stack AI-powered resume analysis and cold email generation tool. Upload a r
 
 | Service | URL |
 |---|---|
-| **Frontend** | https://frontend-xi-ochre-68.vercel.app |
+| **Frontend** | [https://frontend-xi-ochre-68.vercel.app](https://ai-notes-kb-app.vercel.app) |
 | **Backend API** | https://ai-job-tracker-backend-beige.vercel.app |
 | **Swagger Docs** | https://ai-job-tracker-backend-beige.vercel.app/api |
 

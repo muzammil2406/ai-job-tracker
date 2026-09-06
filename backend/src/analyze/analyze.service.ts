@@ -105,6 +105,22 @@ Return ONLY valid JSON, no markdown, no backticks.`;
       },
     });
 
+    // Fire-and-forget webhook notification
+    const webhookUrl = this.config.get<string>('WEBHOOK_URL');
+    if (webhookUrl) {
+      fetch(`${webhookUrl}/webhook/analysis-complete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          resumeId: opts?.resumeId ?? analysis.id,
+          matchScore: parsed.matchScore,
+          fileName: null,
+          timestamp: new Date().toISOString(),
+        }),
+      }).catch((err) => console.warn('Webhook failed:', err.message));
+    }
+
     return { ...analysis, resumeSuggestions: parsed.resumeSuggestions };
   }
 

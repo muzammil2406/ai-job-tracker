@@ -6,17 +6,18 @@ Full-stack AI-powered resume analysis and cold email generation tool. Upload a r
 
 | Service | URL |
 |---|---|
-| **Frontend** | [https://frontend-xi-ochre-68.vercel.app](https://ai-notes-kb-app.vercel.app) |
-| **Backend API** | https://ai-job-tracker-backend-beige.vercel.app |
+| **Frontend** | [https://frontend-xi-ochre-68.vercel.app](https://frontend-xi-ochre-68.vercel.app) |
+| **Backend REST API** | https://ai-job-tracker-backend-beige.vercel.app |
+| **GraphQL API** | https://ai-job-tracker-backend-beige.vercel.app/graphql |
 | **Swagger Docs** | https://ai-job-tracker-backend-beige.vercel.app/api |
 
 ## Tech Stack
 
-- **Frontend:** Next.js 14 (App Router), TypeScript, Tailwind CSS
-- **Backend:** NestJS, Prisma ORM, PostgreSQL (Neon.tech)
+- **Frontend:** Next.js 14 (App Router), TypeScript, Tailwind CSS, Apollo Client (GraphQL + REST)
+- **Backend:** NestJS, GraphQL (Apollo Server, code-first), Prisma ORM, PostgreSQL (Neon.tech)
 - **AI:** Groq API (llama-3.3-70b-versatile via OpenAI SDK)
-- **Auth:** JWT (bcrypt + passport)
-- **Hosting:** Frontend on Vercel, Backend on Vercel (serverless function)
+- **Auth:** JWT (bcrypt + passport-jwt)
+- **Hosting:** Vercel (serverless functions)
 
 ## Features
 
@@ -26,8 +27,33 @@ Full-stack AI-powered resume analysis and cold email generation tool. Upload a r
 - Matched/missing skills identification
 - Bullet-point resume improvement suggestions
 - Cold email generation per role/JD
-- Analysis history page
+- Analysis history page (GraphQL-powered, paginated)
 - Swagger API documentation
+- Archive report tool for stale resumes (Knex + CSV export)
+
+## Architecture
+
+```
+┌──────────────┐    REST + GraphQL     ┌──────────────────────────┐
+│   Frontend   │ ──────────────────►   │   NestJS Backend         │
+│   Next.js    │   Apollo Client       │   ├─ REST controllers    │
+│   + Apollo   │                       │   ├─ GraphQL resolvers   │
+└──────────────┘                       │   ├─ Auth (JWT)          │
+                                       │   ├─ Analyze (Groq AI)   │
+                                       │   └─ Prisma ORM          │
+                                       └──────────┬───────────────┘
+                                                  │
+                                       ┌──────────▼───────────────┐
+                                       │  PostgreSQL (Neon.tech)  │
+                                       │  Resume, Analysis, User  │
+                                       └──────────────────────────┘
+
+                                       ┌──────────────────────────┐
+                                       │  database-tools/         │
+                                       │  Knex migration + CSV    │
+                                       │  archive report          │
+                                       └──────────────────────────┘
+```
 
 ## Project Structure
 
@@ -39,6 +65,7 @@ Full-stack AI-powered resume analysis and cold email generation tool. Upload a r
 │   │   ├── analyze/        # Resume analysis + cold email
 │   │   ├── auth/           # Register/login (JWT)
 │   │   ├── resume/         # Resume CRUD
+│   │   ├── graphql/        # GraphQL resolvers, types, guards
 │   │   └── prisma/         # Database service
 │   └── vercel.json
 ├── frontend/               # Next.js app
@@ -48,21 +75,63 @@ Full-stack AI-powered resume analysis and cold email generation tool. Upload a r
 │   │   ├── dashboard/
 │   │   ├── analyze/
 │   │   └── history/
+│   ├── components/
+│   │   └── ApolloProvider.tsx
 │   └── lib/api.ts          # API client
-└── vercel.json             # Monorepo root config
+├── database-tools/         # Standalone data tooling
+│   ├── src/archive-report.ts
+│   ├── migrations/
+│   ├── knexfile.js
+│   └── package.json
+└── README.md
 ```
+
+## API
+
+### REST Endpoints
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| POST | /auth/register | No | Register new user |
+| POST | /auth/login | No | Login |
+| POST | /analyze/resume | JWT | Upload PDF + job description for analysis |
+| POST | /analyze/cold-email | JWT | Generate cold email |
+| GET | /resume/history | JWT | List resume history |
+| POST | /resume/save | JWT | Save a resume version |
+| DELETE | /resume/:id | JWT | Delete a resume |
+
+### GraphQL
+
+```graphql
+type Query {
+  resumeHistory(page: Int!, pageSize: Int!): ResumeHistoryPage!
+  jobMatch(resumeId: ID!, jobDescription: String!): JobAnalysis!
+}
+
+type Mutation {
+  analyzeResume(input: AnalyzeResumeInput!): MatchHistory!
+}
+```
+
+GraphQL Playground is available in development at `/graphql`.
 
 ## Environment Variables
 
 ### Backend
-- `DATABASE_URL` — PostgreSQL connection string (Neon.tech)
-- `GROQ_API_KEY` — Groq API key
-- `JWT_SECRET` — Secret for signing JWTs
-- `FRONTEND_URL` — Allowed CORS origin
-- `NODE_ENV` — `production`
+
+| Variable | Description |
+|---|---|
+| `DATABASE_URL` | PostgreSQL connection string (Neon.tech) |
+| `GROQ_API_KEY` | Groq API key for AI analysis |
+| `JWT_SECRET` | Secret for signing JWTs |
+| `FRONTEND_URL` | Allowed CORS origin (e.g. `https://frontend-xi-ochre-68.vercel.app`) |
+| `NODE_ENV` | `production` |
 
 ### Frontend
-- `NEXT_PUBLIC_API_URL` — Backend API base URL
+
+| Variable | Description |
+|---|---|
+| `NEXT_PUBLIC_API_URL` | Backend API base URL |
 
 ## Local Development
 
@@ -80,26 +149,28 @@ npm install
 npm run dev
 ```
 
-## API Endpoints
+The frontend runs on http://localhost:3000, the backend on http://localhost:3001.
 
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| POST | /auth/register | No | Register new user |
-| POST | /auth/login | No | Login |
-| POST | /analyze/resume | JWT | Upload PDF + job description for analysis |
-| POST | /analyze/cold-email | JWT | Generate cold email |
-| GET | /resume | JWT | List saved resumes |
-| POST | /resume | JWT | Save a resume version |
-| DELETE | /resume/:id | JWT | Delete a resume |
-| GET | /api | No | Swagger UI |
+### Database Tools
+
+```bash
+cd database-tools
+cp .env.example .env    # Fill in DATABASE_URL
+npm install
+npx ts-node src/archive-report.ts
+```
+
+Exports stale resumes (no analysis in 90+ days) to `reports/stale-resumes.csv`.
 
 ## Deployment
 
 The backend deploys to Vercel as a serverless function. The build pipeline:
+
 1. `npm install --include=dev` installs all deps
 2. `npx prisma generate` generates Prisma client
-3. `npm run build` (`nest build`) compiles TypeScript
-4. Vercel bundles `api/index.js` with the compiled dist
+3. `npx prisma db push` syncs schema to database
+4. `npm run build` (`nest build`) compiles TypeScript
+5. Vercel bundles `api/index.js` with the compiled dist + Prisma client
 
 ```bash
 # Deploy backend
@@ -110,3 +181,9 @@ vercel deploy --prod
 cd frontend
 vercel deploy --prod
 ```
+
+Both projects are linked to Vercel. The Prisma client is generated at build time and bundled via `includeFiles` in `vercel.json` to work in the read-only serverless filesystem.
+
+## License
+
+MIT

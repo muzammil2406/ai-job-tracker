@@ -23,7 +23,7 @@ export interface GraphQLContext {
       driver: ApolloDriver,
       inject: [ConfigService, JwtService],
       useFactory: (config: ConfigService, jwt: JwtService) => ({
-        autoSchemaFile: 'schema.gql',
+        autoSchemaFile: process.env.NODE_ENV === 'production' ? true : 'schema.gql',
         path: 'graphql',
         playground: config.get<string>('NODE_ENV') !== 'production',
         context: (ctx: { req: import('express').Request }): GraphQLContext => {

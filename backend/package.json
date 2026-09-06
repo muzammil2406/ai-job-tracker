@@ -6,7 +6,8 @@
     "build": "nest build",
     "start": "nest start",
     "start:dev": "nest start --watch",
-    "start:prod": "prisma db push && node dist/main"
+    "start:prod": "prisma db push && node dist/main",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@nestjs/apollo": "^12.2.2",

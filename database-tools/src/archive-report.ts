@@ -35,16 +35,16 @@ function toCsv(rows: ArchiveRow[]): string {
 async function main(): Promise<void> {
   const cutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
 
-  const rows: ArchiveRow[] = await db('resumes')
-    .leftJoin('job_analysis', 'job_analysis.resumeId', 'resumes.id')
-    .where('resumes.createdAt', '<', cutoff)
-    .whereNull('job_analysis.id')
+  const rows: ArchiveRow[] = await db('Resume')
+    .leftJoin('Analysis', 'Analysis.resumeId', 'Resume.id')
+    .where('Resume.createdAt', '<', cutoff)
+    .whereNull('Analysis.id')
     .select({
-      resume_id: 'resumes.id',
-      user_id: 'resumes.userId',
-      label: 'resumes.label',
-      created_at: 'resumes.createdAt',
-      matched_job_id: 'job_analysis.id',
+      resume_id: 'Resume.id',
+      user_id: 'Resume.userId',
+      label: 'Resume.label',
+      created_at: 'Resume.createdAt',
+      matched_job_id: 'Analysis.id',
     });
 
   const outPath = path.join(__dirname, '..', 'reports', 'stale-resumes.csv');

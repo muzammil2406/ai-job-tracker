@@ -9,7 +9,7 @@ import {
   Resolver,
 } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { GqlJwtAuthGuard } from './gql-jwt-auth.guard';
 import { PrismaService } from '../prisma/prisma.service';
 import { AnalyzeService } from '../analyze/analyze.service';
 import { Resume } from './models/resume.type';
@@ -30,7 +30,7 @@ export class GraphqlResolver {
   ) {}
 
   @Query(() => ResumeHistoryPage)
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(GqlJwtAuthGuard)
   async resumeHistory(
     @Args('page', { type: () => Int, nullable: true }) page = 1,
     @Args('pageSize', { type: () => Int, nullable: true }) pageSize = 10,
@@ -85,7 +85,7 @@ export class GraphqlResolver {
   }
 
   @Query(() => JobAnalysis)
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(GqlJwtAuthGuard)
   async jobMatch(@Args('id') id: string, @Context() ctx: { req: GraphQLRequest }) {
     const userId = ctx.req.user!.id;
     return this.prisma.analysis.findFirstOrThrow({
@@ -94,7 +94,7 @@ export class GraphqlResolver {
   }
 
   @Mutation(() => JobAnalysis)
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(GqlJwtAuthGuard)
   async analyzeResume(
     @Args('input') input: AnalyzeResumeInput,
     @Context() ctx: { req: GraphQLRequest },

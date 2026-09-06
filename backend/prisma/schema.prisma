@@ -15,8 +15,6 @@ model User {
   createdAt DateTime   @default(now())
   analyses  Analysis[]
   resumes   Resume[]
-
-  @@map("users")
 }
 
 model Analysis {
@@ -33,8 +31,6 @@ model Analysis {
   user           User     @relation(fields: [userId], references: [id])
   resume         Resume?  @relation(fields: [resumeId], references: [id])
   createdAt      DateTime @default(now())
-
-  @@map("job_analysis")
 }
 
 model Resume {
@@ -45,6 +41,4 @@ model Resume {
   user      User       @relation(fields: [userId], references: [id])
   analyses  Analysis[]
   createdAt DateTime   @default(now())
-
-  @@map("resumes")
 }

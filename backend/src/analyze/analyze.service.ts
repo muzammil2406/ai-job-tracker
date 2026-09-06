@@ -59,7 +59,7 @@ export class AnalyzeService {
     throw new BadRequestException('AI request failed after retries');
   }
 
-  async analyzeResume(userId: string, resumeText: string, jobDescription: string) {
+  async analyzeResume(userId: string, resumeText: string, jobDescription: string, opts?: { resumeId?: string }) {
     const prompt = `You are an expert ATS resume analyzer. Given this resume and job description, return a JSON object with:
 - matchScore: number (0-100)
 - matchedSkills: string[] (skills in both resume and JD)
@@ -101,6 +101,7 @@ Return ONLY valid JSON, no markdown, no backticks.`;
         summary: parsed.summary,
         jobDescription,
         userId,
+        ...(opts?.resumeId ? { resumeId: opts.resumeId } : {}),
       },
     });
 

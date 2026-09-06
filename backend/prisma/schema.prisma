@@ -15,6 +15,8 @@ model User {
   createdAt DateTime   @default(now())
   analyses  Analysis[]
   resumes   Resume[]
+
+  @@map("users")
 }
 
 model Analysis {
@@ -27,15 +29,22 @@ model Analysis {
   jobDescription String
   coldEmail      String?
   userId         String
+  resumeId       String?
   user           User     @relation(fields: [userId], references: [id])
+  resume         Resume?  @relation(fields: [resumeId], references: [id])
   createdAt      DateTime @default(now())
+
+  @@map("job_analysis")
 }
 
 model Resume {
-  id        String   @id @default(uuid())
+  id        String     @id @default(uuid())
   label     String
   content   String
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  createdAt DateTime @default(now())
+  user      User       @relation(fields: [userId], references: [id])
+  analyses  Analysis[]
+  createdAt DateTime   @default(now())
+
+  @@map("resumes")
 }

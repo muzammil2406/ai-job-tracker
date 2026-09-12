@@ -30,7 +30,7 @@ export class AnalyzeService {
           model: this.model,
           messages: [{ role: 'user', content: prompt }],
           temperature,
-          max_tokens: 8192,
+          max_tokens: 16384,
         });
         return res.choices[0]?.message?.content ?? '';
       } catch (error: any) {
@@ -89,13 +89,21 @@ export class AnalyzeService {
     }
   }
 
+  private async completeJsonResponse(raw: string): Promise<any> {
+    const prompt = `The following JSON document was cut off mid-way. Rebuild it into ONE complete, valid JSON object, preserving all existing keys and values and finishing anything that was truncated. Add sensible placeholder content if a value was cut off. Return ONLY the finished JSON, no markdown, no backticks, no explanation.
+
+${raw}`;
+    const completed = await this.generateWithRetry(prompt, 2, 0);
+    return this.extractJson(completed);
+  }
+
   async analyzeResume(userId: string, resumeText: string, jobDescription: string, opts?: { resumeId?: string }) {
     const prompt = `You are an expert ATS resume analyzer. Given this resume and job description, return a JSON object with:
 - matchScore: number (0-100)
 - matchedSkills: string[] (skills in both resume and JD)
 - missingSkills: string[] (skills in JD but not in resume)
-- resumeSuggestions: string[] (3-5 specific bullet point improvements)
-- summary: string (2-3 sentence overall assessment)
+- resumeSuggestions: string[] (3-5 short bullet improvements, each under 25 words)
+- summary: string (2-3 sentence overall assessment, under 60 words)
 
 Resume:
 ${resumeText}
@@ -107,7 +115,12 @@ Return ONLY valid JSON, no markdown, no backticks.`;
 
     const response = await this.generateWithRetry(prompt, 3, 0);
 
-    const parsed = this.extractJson(response);
+    let parsed: any;
+    try {
+      parsed = this.extractJson(response);
+    } catch {
+      parsed = await this.completeJsonResponse(response);
+    }
 
     const matchScore = Number(parsed.matchScore);
     if (!Number.isFinite(matchScore)) {

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { apiFetch, setToken } from '@/lib/api';
+import { apiFetch, setToken, setUser } from '@/lib/api';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -21,6 +21,7 @@ export default function LoginPage() {
         body: JSON.stringify(form),
       });
       setToken(data.access_token);
+      setUser(data.user);
       router.push('/dashboard');
     } catch (err: any) {
       setError(err.message || 'Login failed');

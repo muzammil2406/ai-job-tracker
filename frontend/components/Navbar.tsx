@@ -1,13 +1,17 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getToken, removeToken } from '@/lib/api';
+import { getToken, getUser, removeToken } from '@/lib/api';
 
 export default function Navbar() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userName, setUserName] = useState<string | null>(null);
 
   useEffect(() => {
-    const sync = () => setIsLoggedIn(Boolean(getToken()));
+    const sync = () => {
+      setIsLoggedIn(Boolean(getToken()));
+      setUserName(getUser()?.name ?? null);
+    };
     sync();
     window.addEventListener('auth-change', sync);
     window.addEventListener('storage', sync);
@@ -40,6 +44,9 @@ export default function Navbar() {
               <a href="/history" className="text-gray-400 hover:text-white transition-colors">
                 History
               </a>
+              <span className="text-gray-300" title="Logged in as">
+                {userName}
+              </span>
               <button
                 onClick={handleLogout}
                 className="text-gray-400 hover:text-red-400 transition-colors"

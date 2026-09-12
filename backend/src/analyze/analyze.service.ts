@@ -22,13 +22,14 @@ export class AnalyzeService {
   private async generateWithRetry(
     prompt: string,
     maxRetries = 3,
+    temperature = 0.7,
   ): Promise<string> {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         const res = await this.openai.chat.completions.create({
           model: this.model,
           messages: [{ role: 'user', content: prompt }],
-          temperature: 0.7,
+          temperature,
           max_tokens: 2048,
         });
         return res.choices[0]?.message?.content ?? '';
@@ -77,7 +78,7 @@ ${jobDescription}
 
 Return ONLY valid JSON, no markdown, no backticks.`;
 
-    const response = await this.generateWithRetry(prompt);
+    const response = await this.generateWithRetry(prompt, 3, 0);
 
     let parsed: {
       matchScore: number;

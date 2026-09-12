@@ -10,8 +10,24 @@ export function setToken(token: string) {
   window.dispatchEvent(new Event('auth-change'));
 }
 
+export function setUser(user: { id: string; name: string; email: string }) {
+  localStorage.setItem('user', JSON.stringify(user));
+  window.dispatchEvent(new Event('auth-change'));
+}
+
+export function getUser(): { id: string; name: string; email: string } | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem('user');
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
 export function removeToken() {
   localStorage.removeItem('token');
+  localStorage.removeItem('user');
   window.dispatchEvent(new Event('auth-change'));
 }
 

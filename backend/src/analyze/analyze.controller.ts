@@ -12,6 +12,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiTags, ApiOperation, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AnalyzeService } from './analyze.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { ColdEmailDto } from './dto/cold-email.dto';
 import pdfParse from 'pdf-parse';
 
@@ -20,7 +21,10 @@ import pdfParse from 'pdf-parse';
 @UseGuards(JwtAuthGuard)
 @Controller('analyze')
 export class AnalyzeController {
-  constructor(private analyzeService: AnalyzeService) {}
+  constructor(
+    private analyzeService: AnalyzeService,
+    private prisma: PrismaService,
+  ) {}
 
   @Post('resume')
   @UseInterceptors(FileInterceptor('resume'))
@@ -46,7 +50,25 @@ export class AnalyzeController {
     const pdfData = await pdfParse(file.buffer);
     const resumeText = pdfData.text;
 
-    return this.analyzeService.analyzeResume(req.user.id, resumeText, jobDescription);
+    const resume = await this.prisma.resume.create({
+      data: {
+        label: file.originalname || 'Auto-uploaded resume',
+        content: resumeText,
+        userId: req.user.id,
+      },
+    });
+
+    try {
+      return await this.analyzeService.analyzeResume(
+        req.user.id,
+        resumeText,
+        jobDescription,
+        { resumeId: resume.id },
+      );
+    } catch (err) {
+      await this.prisma.resume.delete({ where: { id: resume.id } }).catch(() => undefined);
+      throw err;
+    }
   }
 
   @Post('cold-email')

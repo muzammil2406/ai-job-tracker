@@ -30,7 +30,7 @@ export class AnalyzeService {
           model: this.model,
           messages: [{ role: 'user', content: prompt }],
           temperature,
-          max_tokens: 2048,
+          max_tokens: 8192,
         });
         return res.choices[0]?.message?.content ?? '';
       } catch (error: any) {

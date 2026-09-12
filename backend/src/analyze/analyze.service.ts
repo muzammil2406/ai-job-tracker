@@ -6,11 +6,13 @@ import { PrismaService } from '../prisma/prisma.service';
 @Injectable()
 export class AnalyzeService {
   private openai: OpenAI;
+  private model: string;
 
   constructor(
     private config: ConfigService,
     private prisma: PrismaService,
   ) {
+    this.model = config.get<string>('GROQ_MODEL') ?? 'openai/gpt-oss-20b';
     this.openai = new OpenAI({
       apiKey: config.get<string>('GROQ_API_KEY')!,
       baseURL: 'https://api.groq.com/openai/v1',
@@ -24,7 +26,7 @@ export class AnalyzeService {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         const res = await this.openai.chat.completions.create({
-          model: 'llama-3.3-70b-versatile',
+          model: this.model,
           messages: [{ role: 'user', content: prompt }],
           temperature: 0.7,
           max_tokens: 2048,

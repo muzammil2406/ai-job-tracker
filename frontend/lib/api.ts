@@ -7,10 +7,12 @@ export function getToken(): string | null {
 
 export function setToken(token: string) {
   localStorage.setItem('token', token);
+  window.dispatchEvent(new Event('auth-change'));
 }
 
 export function removeToken() {
   localStorage.removeItem('token');
+  window.dispatchEvent(new Event('auth-change'));
 }
 
 export async function apiFetch(path: string, options: RequestInit = {}) {

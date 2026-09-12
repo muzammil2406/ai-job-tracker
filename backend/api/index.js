@@ -23,7 +23,11 @@ async function createApp() {
 
   const allowedOrigins = ['http://localhost:3000'];
   if (process.env.FRONTEND_URL) {
-    allowedOrigins.push(process.env.FRONTEND_URL);
+    // FRONTEND_URL may be a comma-separated list of allowed origins.
+    for (const origin of process.env.FRONTEND_URL.split(',')) {
+      const trimmed = origin.trim();
+      if (trimmed) allowedOrigins.push(trimmed);
+    }
   }
 
   app.enableCors({ origin: allowedOrigins, credentials: true });

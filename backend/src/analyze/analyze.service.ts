@@ -62,6 +62,33 @@ export class AnalyzeService {
     throw new BadRequestException('AI request failed after retries');
   }
 
+  private extractJson(raw: string): any {
+    let text = raw.trim();
+    text = text
+      .replace(/```jsonl?\n?/gi, '')
+      .replace(/```\n?/gi, '')
+      .trim();
+
+    const firstBrace = text.indexOf('{');
+    const lastBrace = text.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace > firstBrace) {
+      text = text.slice(firstBrace, lastBrace + 1);
+    }
+
+    try {
+      return JSON.parse(text);
+    } catch {
+      const repaired = text.replace(/,\s*([}\]])/g, '$1');
+      try {
+        return JSON.parse(repaired);
+      } catch {
+        throw new BadRequestException(
+          `Failed to parse AI response. Raw (first 300 chars): ${raw.slice(0, 300)}`,
+        );
+      }
+    }
+  }
+
   async analyzeResume(userId: string, resumeText: string, jobDescription: string, opts?: { resumeId?: string }) {
     const prompt = `You are an expert ATS resume analyzer. Given this resume and job description, return a JSON object with:
 - matchScore: number (0-100)
@@ -80,28 +107,28 @@ Return ONLY valid JSON, no markdown, no backticks.`;
 
     const response = await this.generateWithRetry(prompt, 3, 0);
 
-    let parsed: {
-      matchScore: number;
-      matchedSkills: string[];
-      missingSkills: string[];
-      resumeSuggestions: string[];
-      summary: string;
-    };
+    const parsed = this.extractJson(response);
 
-    try {
-      const cleaned = response.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      parsed = JSON.parse(cleaned);
-    } catch {
-      throw new BadRequestException('Failed to parse AI response');
+    const matchScore = Number(parsed.matchScore);
+    if (!Number.isFinite(matchScore)) {
+      throw new BadRequestException(
+        'AI response missing matchScore. Raw (first 300 chars): ' + response.slice(0, 300),
+      );
     }
+
+    const matchedSkills = Array.isArray(parsed.matchedSkills) ? parsed.matchedSkills : [];
+    const missingSkills = Array.isArray(parsed.missingSkills) ? parsed.missingSkills : [];
+    const resumeSuggestions = Array.isArray(parsed.resumeSuggestions) ? parsed.resumeSuggestions : [];
+    const summary =
+      typeof parsed.summary === 'string' ? parsed.summary : '';
 
     const analysis = await this.prisma.analysis.create({
       data: {
-        matchScore: parsed.matchScore,
-        matchedSkills: parsed.matchedSkills,
-        missingSkills: parsed.missingSkills,
-        suggestions: parsed.resumeSuggestions,
-        summary: parsed.summary,
+        matchScore,
+        matchedSkills,
+        missingSkills,
+        suggestions: resumeSuggestions,
+        summary,
         jobDescription,
         userId,
         ...(opts?.resumeId ? { resumeId: opts.resumeId } : {}),
@@ -117,14 +144,14 @@ Return ONLY valid JSON, no markdown, no backticks.`;
         body: JSON.stringify({
           userId,
           resumeId: opts?.resumeId ?? analysis.id,
-          matchScore: parsed.matchScore,
+          matchScore,
           fileName: null,
           timestamp: new Date().toISOString(),
         }),
       }).catch((err) => console.warn('Webhook failed:', err.message));
     }
 
-    return { ...analysis, resumeSuggestions: parsed.resumeSuggestions };
+    return { ...analysis, resumeSuggestions };
   }
 
   async generateColdEmail(userId: string, role: string, jobDescription: string, userName: string) {
